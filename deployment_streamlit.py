@@ -298,13 +298,13 @@ if(selectionCUSTCAT=='AGE CATEGORY'):
 
     """##### Day and Night"""
 
-    ac_dn = ld2.groupby(['AGE_CATEGORY','RACE']).size().reset_index()
+    ac_dn = ld2.groupby(['PART_OF_DAY','AGE_CATEGORY']).size().reset_index()
     ac_dn.rename(columns={0: 'FREQUENCY'}, inplace=True)
 
     chartAge2 = alt.Chart(ac_dn).mark_bar().encode(
-        x='AGE_CATEGORY',
+        x='PART_OF_DAY',
         y='FREQUENCY',
-        color=alt.Color('RACE', scale=alt.Scale(range=["#87F5D7","#87F5A0", "#F5A087", "#F5D787"]))
+        color=alt.Color('AGE_CATEGORY', scale=alt.Scale(range=["#581845","#C70039", "#FFC300"]))
     ).properties(
         width=250  
     )
@@ -857,7 +857,7 @@ if(selectionq6=='Perak'):
 
     st.altair_chart(locationPerak, use_container_width=True)
 
-"""### 8. What is the customer body size for the dryer and washing machine?"""
+"""### 7. What is the customer body size for the dryer and washing machine?"""
 
 dryerWasherPair = pd.DataFrame(
     {'Dryer': dryer,
