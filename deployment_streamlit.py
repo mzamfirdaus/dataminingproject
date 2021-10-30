@@ -987,8 +987,9 @@ X_partDay = df_FS.drop('PART_OF_DAY', axis=1)
 # feat_selector_partDay.fit(X_partDay.values, y_partDay.values.ravel())
 
 
-y_AGE = df_FS['AGE_RANGE']
-X_AGE = df_FS.drop('AGE_RANGE', axis=1)
+df_FS2 = df_FS.copy()
+y_AGE = df_FS2['AGE_RANGE']
+X_AGE = df_FS2.drop(['AGE_RANGE','AGE_CATEGORY'], axis=1)
 
 # your codes here...
 # rf = RandomForestClassifier(n_jobs=-1, class_weight="balanced", max_depth=5)
@@ -1009,9 +1010,17 @@ print('---------Top 10----------')
 # boruta_score_partDay = ranking(list(map(float, feat_selector_partDay.ranking_)), colnames, order=-1)
 # boruta_score_partDay = pd.DataFrame(list(boruta_score_partDay.items()), columns=["features","score"])
 # boruta_score_partDay = boruta_score_partDay.sort_values("score", ascending=False)
-
-features = ['PART_OF_WEEK','DATE','TIME','AGE_RANGE','PANTS_COLOUR','RACE','BASKET_COLOUR','PANTS_TYPE','SHIRT_COLOUR','WASHER_NO']
-score = [1.00,1.00,0.94,0.83,0.61,0.44,0.39,0.33,0.22,0.11]
+features = ['AGE_RANGE',
+ 'PART_OF_WEEK',
+ 'DATE',
+ 'PANTS_COLOUR',
+ 'BASKET_COLOUR',
+ 'RACE',
+ 'SHIRT_COLOUR',
+ 'WASHER_NO',
+ 'PANTS_TYPE',
+ 'ATTIRE']
+score = [1.00,1.00,1.00,0.94,0.88,0.82,0.76,0.71,0.71,0.59]
 boruta_score_partDay = pd.DataFrame(data=features, columns=["features"])
 boruta_score_partDay['score'] = score
 
@@ -1026,8 +1035,16 @@ st.dataframe(boruta_score_partDay.head(10))
 # boruta_score_AGE = boruta_score_AGE.sort_values("score", ascending=False)
 
 
-features = ['AGE_CATEGORY','TIME','DATE','BASKET_COLOUR','SHIRT_COLOUR','PANTS_COLOUR','PART_OF_WEEK','DRYER_NO','RACE','WASHER_NO']
-score = [1.00,1.00,0.94,0.83,0.61,0.44,0.39,0.33,0.22,0.11]
+features = ['TIME',
+ 'DATE',
+ 'BASKET_COLOUR',
+ 'SHIRT_COLOUR',
+ 'PANTS_COLOUR',
+ 'PART_OF_WEEK',
+ 'RACE',
+ 'DRYER_NO',
+ 'BODY_SIZE']
+score = [1.00,0.95,0.89,0.84,0.79,0.74,0.68,0.63,0.58]
 boruta_score_AGE = pd.DataFrame(data=features, columns=["features"])
 boruta_score_AGE['score'] = score
 #display top 10
@@ -1038,7 +1055,16 @@ from imblearn.over_sampling import SMOTE
 from sklearn.model_selection import train_test_split
 
 
-partDaytop10 = ['PART_OF_WEEK','DATE','TIME','AGE_RANGE','PANTS_COLOUR','RACE','BASKET_COLOUR','PANTS_TYPE','SHIRT_COLOUR','WASHER_NO']
+partDaytop10 = ['AGE_RANGE',
+ 'PART_OF_WEEK',
+ 'DATE',
+ 'PANTS_COLOUR',
+ 'BASKET_COLOUR',
+ 'RACE',
+ 'SHIRT_COLOUR',
+ 'WASHER_NO',
+ 'PANTS_TYPE',
+ 'ATTIRE']
 X_partDay = df_FS[partDaytop10]
 y_partDay = df_FS['PART_OF_DAY']
 
@@ -1136,7 +1162,16 @@ import matplotlib.pyplot as plt
 from sklearn import tree
 
 partDaytop10 = boruta_score_partDay.head(10)
-partDaytop10 = ['PART_OF_WEEK','DATE','TIME','AGE_RANGE','PANTS_COLOUR','RACE','BASKET_COLOUR','PANTS_TYPE','SHIRT_COLOUR','WASHER_NO']
+partDaytop10 = ['AGE_RANGE',
+ 'PART_OF_WEEK',
+ 'DATE',
+ 'PANTS_COLOUR',
+ 'BASKET_COLOUR',
+ 'RACE',
+ 'SHIRT_COLOUR',
+ 'WASHER_NO',
+ 'PANTS_TYPE',
+ 'ATTIRE']
 
 X_partDay = df_FS[partDaytop10]
 y_partDay = df_FS['PART_OF_DAY']
@@ -1181,7 +1216,7 @@ classf_res = alt.Chart(modelAccuracy).mark_bar().encode(
     y="Accuracy:Q",
     # The highlight will be set on the result of a conditional statement
     color=alt.condition(
-        alt.datum.Accuracy > 0.95, 
+        alt.datum.Accuracy > 0.65, 
         alt.value('orange'),     
         alt.value('steelblue')   
     )
@@ -1240,7 +1275,7 @@ smoted_res = alt.Chart(modelAccuracySMOTED).mark_bar().encode(
     y="Accuracy:Q",
     # The highlight will be set on the result of a conditional statement
     color=alt.condition(
-        alt.datum.Accuracy == 1.0, 
+        alt.datum.Accuracy > 0.65, 
         alt.value('orange'),     
         alt.value('steelblue')   
     )
@@ -1276,15 +1311,16 @@ Given the features, predict what is the age of the customer that visit the laund
 
 
 """### Linear Regression, Decision Tree Regressor and SVM (rbf, poly, linear)"""
+cols = boruta_score_AGE['features'].head(9)
+X_AGE = df_FS[cols]
+y_AGE = df_FS['AGE_RANGE']
 
 X_AGE_train, X_AGE_test, Y_AGE_train, Y_AGE_test = train_test_split(X_AGE, y_AGE, test_size = 0.30, random_state = 0)
 
 
 from sklearn.linear_model import LinearRegression
 
-cols = boruta_score_AGE['features'].head(9)
-X_AGE = df_FS[cols]
-y_AGE = df_FS['AGE_RANGE']
+
 
 
 lr_AGE = LinearRegression().fit(X_AGE_train, Y_AGE_train)
@@ -1356,7 +1392,7 @@ modelreg = alt.Chart(modelAccuracyRegression).mark_bar().encode(
     x='Model:O',
     y="Accuracy:Q",
     color=alt.condition(
-        alt.datum.Accuracy > 0.7, 
+        alt.datum.Accuracy > 0, 
         alt.value('green'),     
         alt.value('red')   
     )
