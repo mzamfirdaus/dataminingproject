@@ -19,6 +19,23 @@ import numpy as np
 
 from sklearn.preprocessing import LabelEncoder
 
+PAGE_SECTIONS = [
+    'Import data',
+    'Preprocessing',
+    'Exploratory Data Analysis',
+    'Feature Selection',
+    'Model building',
+]
+
+def add_sidebar():
+    sb = st.sidebar
+    sb.header('Table of Content')
+    for i in range (len(PAGE_SECTIONS)):
+        anchor_link = '-'.join(PAGE_SECTIONS[i].lower().split())
+        sb.write('***['+PAGE_SECTIONS[i]+'](#'+anchor_link+')***')
+    return sb
+
+
 def section_gap():
     st.markdown('#')
 # To add a line break between sections in webpage
@@ -26,6 +43,9 @@ def section_separator():
     section_gap()
     st.write('---')
     section_gap()
+
+add_sidebar()
+st.title("TDS 3301 DATA MINING: PROJECT")
 
 section_separator()
 """# Import data
@@ -45,42 +65,69 @@ laundry
 residentsKelantan = pd.read_excel('TamanPerumahan/KELANTAN.xlsx', skiprows=3)
 residentsKelantan = residentsKelantan.iloc[:563,:]
 residentsKelantan2 = residentsKelantan.copy()
-st.text("Kelantan")
 
 test2 = residentsKelantan2.astype(str)
-st.dataframe(test2)
 # residentsKelantan
-st.text("Perak")
 residentsPerak = pd.read_excel('TamanPerumahan/PENGKALANHULU.xlsx', skiprows=3)
 residentsPerak = residentsPerak.iloc[:23,:]
-residentsPerak
+
 residentsPahang = pd.read_excel('TamanPerumahan/PAHANG.xlsx', skiprows=2)
 residentsPahang = residentsPahang.iloc[:40,:]
-st.text("Pahang")
-residentsPahang
+
 residentsN9 = pd.read_csv('TamanPerumahan/NEGERISEMBILAN.csv', encoding='cp1252')
-st.text("Negeri Sembilan")
-residentsN9
+
+
+additionalDatasetList = []
+selection = st.selectbox('Select state:',['Kelantan','Negeri Sembilan', 'Pahang','Perak'])
+if(selection=='Kelantan'):
+    st.dataframe(test2)
+if(selection=='Negeri Sembilan'):
+    st.dataframe(residentsN9)
+if(selection=='Pahang'):
+    st.dataframe(residentsPahang)
+if(selection=='Perak'):
+    st.dataframe(residentsPerak)
+
+
+
+
+
+
+
 
 section_separator()
 st.info("Full preprocessing step available in Report and Jupyter file")
+
 """# Preprocessing
 ##  Preprocessing main dataset
+
+"""
+"""
 
 ### Is there any missing values or duplicates data? If so, how do we want to deal with it?
 """
 
 # dearling wih missing values
 st.text(laundry.isna().sum())
+st.text("Drop rows with null values and remove duplicate")
 
 # drop rows with null values
 laundry = laundry.dropna()
 
 # dealing with duplicates data
 laundry = laundry.drop_duplicates()
-
+"""
+### Are there any columns that require conversion of data type?
+"""
 laundry['TIME'] = pd.to_datetime(laundry['TIME']).dt.time
 laundry['DATE'] = pd.to_datetime(laundry['DATE'], format='%d/%m/%Y', errors='coerce')
+
+st.write("TIME data type:  ",str(type(laundry['TIME'][0])))
+st.write("DATE data type:  ",str(type(laundry['DATE'][0])))
+
+"""
+###  Can I add an extra data point?
+"""
 
 # Binning time into day and night 
 # night = 7pm - 7am, day = 7am - 6.59pm
@@ -100,14 +147,24 @@ laundry['PART_OF_WEEK'] = laundry['PART_OF_WEEK'].map(mappingtoDays)
 # Binning age into young, adult, senior citizen
 laundry["AGE_CATEGORY"] = pd.cut(laundry["AGE_RANGE"], bins=[1,30,45,70], labels=["Young","Adults","Older adults"])
 
+laundry[['PART_OF_DAY','PART_OF_WEEK','AGE_CATEGORY']]
+st.info("age range information : YOUNG : < 30; ADULTS : 30 - 44; OLDER ADULTS : > 44")
 
 """### Is there any outliers in the data? Is the outliers an error or else?
 Outlier analysis
 
 """
+additionalDatasetList = []
+selectionx = st.selectbox('Select x:',['GENDER','RACE', 'BODY_SIZE','WITH_KIDS','BASKET_SIZE','BASKET_COLOUR','ATTIRE','SHIRT_COLOUR','SHIRT_TYPE','PANTS_COLOUR','PANTS_TYPE','PANTS_TYPE','SPECTACLES'])
 
-fig = px.box(laundry, x="GENDER", y='AGE_RANGE')
-st.plotly_chart(fig, use_container_width=True)
+
+
+pre1 = alt.Chart(laundry[[selectionx,'AGE_RANGE']]).mark_boxplot(size=100).encode(
+    x=selectionx,
+    y='AGE_RANGE',
+    color=alt.Color(selectionx)
+).properties(width=1000, height=400)
+st.altair_chart(pre1,use_container_width=True)
 
 
 
@@ -153,16 +210,27 @@ residentalLocation2 = residentalLocation.copy()
 test = residentalLocation2.astype(str)
 st.dataframe(test)
 
+"""
+### Are there any columns that require conversion of data type?
+"""
+
 residentalLocation['NUMBER_OF_HOUSES'] = pd.to_numeric(residentalLocation['NUMBER_OF_HOUSES'], errors='coerce')
 residentalLocation = residentalLocation.dropna()
+residentalLocation['NUMBER_OF_HOUSES']
+st.write("NUMBER_OF_HOUSES data type:  ",str(type(residentalLocation['NUMBER_OF_HOUSES'][0])))
 
 """### Are there any outliers in the data? Is the outliers an error or else?
 Outlier analysis
 """
 
-df = px.data.tips()
-fig = px.box(residentalLocation, x="STATE", y="NUMBER_OF_HOUSES")
-st.plotly_chart(fig, use_container_width=True)
+
+
+pre2 = alt.Chart(residentalLocation).mark_boxplot(size=100).encode(
+    x='STATE',
+    y='NUMBER_OF_HOUSES',
+    color=alt.Color('STATE')
+).properties(width=1000, height=400)
+st.altair_chart(pre2,use_container_width=True)
 
 # fig.show()
 
@@ -178,218 +246,250 @@ bb = laundryAnalaysis.groupby(['DATE','PART_OF_DAY']).size().reset_index()
 bb.rename(columns={0: 'FREQUENCY'}, inplace=True)
 
 
-fig = px.bar(bb, x="DATE", y="FREQUENCY",
-             color="PART_OF_DAY", hover_data=['FREQUENCY'],
-             barmode = 'group')
-st.plotly_chart(fig, use_container_width=True)
+chartOverall1 = alt.Chart(bb).mark_bar().encode(
+    x='DATE',
+    y='FREQUENCY',
+    color=alt.Color('PART_OF_DAY', scale=alt.Scale(range=["#F4D03F","#1A5276"]))
+).properties(
+    width=650  
+)
+st.altair_chart(chartOverall1, use_container_width=True)
+
+print('Frequency of customer during the day: ', bb[bb['PART_OF_DAY']=='Day'].sum())
+print('Frequency of customer during the night: ', bb[bb['PART_OF_DAY']=='Night'].sum())
+
 cust_day = bb[bb['PART_OF_DAY']=='Day'].sum()
 cust_night = bb[bb['PART_OF_DAY']=='Night'].sum()
 st.write('Frequency of customer during the day: ', cust_day.values[0])
 st.write('Frequency of customer during the night: ', cust_night.values[0])
 
 """### 2. What type of customer visits laundry on weekend, weekdays, night and day ?
-
-#### CUSTOMER TYPE: AGE CATEGORY
-##### weekend weekdays
 """
 
-ld2 = laundry.copy()
+selectionCUSTCAT = st.selectbox('Select type of customer:',['AGE CATEGORY','CUSTOMER WITH KIDS', 'AGE RANGE'])
 
-mappingtoWW = {'Monday': 'Weekdays','Tuesday': 'Weekdays','Wednesday': 'Weekdays','Thursday': 'Weekdays','Friday': 'Weekdays','Saturday': 'Weekend','Sunday': 'Weekend'}
+if(selectionCUSTCAT=='AGE CATEGORY'):
 
-ld2['WW'] = laundry['PART_OF_WEEK'].map(mappingtoWW)
+    st.info("age range information : YOUNG : < 30; ADULTS : 30 - 44; OLDER ADULTS : > 44")
+    """
+    ##### weekend weekdays
+    """
+    ld2 = laundry.copy()
 
-# groupby age
-ac_ww = ld2.groupby(['WW','AGE_CATEGORY']).size().reset_index()
-ac_ww.rename(columns={0: 'FREQUENCY'}, inplace=True)
+    mappingtoWW = {'Monday': 'Weekdays','Tuesday': 'Weekdays','Wednesday': 'Weekdays','Thursday': 'Weekdays','Friday': 'Weekdays','Saturday': 'Weekend','Sunday': 'Weekend'}
 
-# display result
-st.info("age range information : YOUNG : < 30; ADULTS : 30 - 44; OLDER ADULTS : > 44")
+    ld2['WW'] = laundry['PART_OF_WEEK'].map(mappingtoWW)
 
-chartAge1 = alt.Chart(ac_ww).mark_bar().encode(
-    x='WW',
-    y='FREQUENCY',
-    color=alt.Color('AGE_CATEGORY', scale=alt.Scale(range=["#581845","#C70039", "#FFC300"]))
-).properties(
-    width=250  
-)
-st.altair_chart(chartAge1, use_container_width=True)
+    # groupby age
+    ac_ww = ld2.groupby(['WW','AGE_CATEGORY']).size().reset_index()
+    ac_ww.rename(columns={0: 'FREQUENCY'}, inplace=True)
 
+    # display result
 
-"""##### Day and Night"""
-
-ac_dn = ld2.groupby(['AGE_CATEGORY','RACE']).size().reset_index()
-ac_dn.rename(columns={0: 'FREQUENCY'}, inplace=True)
-
-chartAge2 = alt.Chart(ac_dn).mark_bar().encode(
-    x='AGE_CATEGORY',
-    y='FREQUENCY',
-    color=alt.Color('RACE', scale=alt.Scale(range=["#87F5D7","#87F5A0", "#F5A087", "#F5D787"]))
-).properties(
-    width=250  
-)
-
-st.altair_chart(chartAge2, use_container_width=True)
-
-"""#### CUSTOMER TYPE: RACE
-##### Weekend Weekdays
-"""
-
-r_ww = ld2.groupby(['WW','RACE']).size().reset_index()
-r_ww.rename(columns={0: 'FREQUENCY'}, inplace=True)
-
-chartrace1 = alt.Chart(r_ww).mark_bar().encode(
-    x='WW',
-    y='FREQUENCY',
-    color=alt.Color('RACE', scale=alt.Scale(range=["#87F5D7","#87F5A0", "#F5A087", "#F5D787"]))
-).properties(
-    width=250  
-)
-
-st.altair_chart(chartrace1, use_container_width=True)
-
-"""##### Day and Night"""
-
-r_dn = ld2.groupby(['PART_OF_DAY','RACE']).size().reset_index()
-r_dn.rename(columns={0: 'FREQUENCY'}, inplace=True)
-
-chartrace2 = alt.Chart(r_dn).mark_bar().encode(
-    x='PART_OF_DAY',
-    y='FREQUENCY',
-    color=alt.Color('RACE', scale=alt.Scale(range=["#87F5D7","#87F5A0", "#F5A087", "#F5D787"]))
-).properties(
-    width=250  
-)
-st.altair_chart(chartrace2, use_container_width=True)
-
-"""#### CUSTOMER TYPE: GENDER
-##### Weekend and Weekdays
-"""
-
-g_ww = ld2.groupby(['WW','GENDER']).size().reset_index()
-g_ww.rename(columns={0: 'FREQUENCY'}, inplace=True)
-
-chartGender1 = alt.Chart(g_ww).mark_bar().encode(
-    x='WW',
-    y='FREQUENCY',
-    color=alt.Color('GENDER', scale=alt.Scale(range=["#FF5733", "#DAF7A6"]))
-).properties(
-    width=250  
-)
-
-st.altair_chart(chartGender1, use_container_width=True)
-
-
-
-"""##### Day and Night"""
-
-g_dn = ld2.groupby(['PART_OF_DAY','GENDER']).size().reset_index()
-g_dn.rename(columns={0: 'FREQUENCY'}, inplace=True)
-
-chartGender2 = alt.Chart(g_dn).mark_bar().encode(
-    x='PART_OF_DAY',
-    y='FREQUENCY',
-    color=alt.Color('GENDER', scale=alt.Scale(range=["#FF5733", "#DAF7A6"]))
-).properties(
-    width=250  
-)
-
-
-st.altair_chart(chartGender2, use_container_width=True)
-
-
-"""#### CUSTOMER TYPE: CUSTOMER WITH KIDS
-##### Weekend and Weekdays
-"""
-
-k_ww = ld2.groupby(['WW','WITH_KIDS']).size().reset_index()
-k_ww.rename(columns={0: 'FREQUENCY'}, inplace=True)
-
-chartWkids1 = alt.Chart(k_ww).mark_bar().encode(
-    x='WW',
-    y='FREQUENCY',
-    color=alt.Color('WITH_KIDS', scale=alt.Scale(range=["#F5D787", "#A5F587"]))
-).properties(
-    width=250  
-)
-
-st.altair_chart(chartWkids1, use_container_width=True)
-
-
-
-"""##### Days and Night"""
-
-k_dn = ld2.groupby(['PART_OF_DAY','WITH_KIDS']).size().reset_index()
-k_dn.rename(columns={0: 'FREQUENCY'}, inplace=True)
-
-chartWkids2 = alt.Chart(k_dn).mark_bar().encode(
-    x='PART_OF_DAY',
-    y='FREQUENCY',
-    color=alt.Color('WITH_KIDS', scale=alt.Scale(range=["#F5D787", "#A5F587"]))
-).properties(
-    width=250  
-)
-
-st.altair_chart(chartWkids2, use_container_width=True)
-
-
-
-"""#### CLUSTERING - AGE RANGE"""
-
-cluster_data = ld2[['PART_OF_DAY','AGE_RANGE']]
-
-X = pd.get_dummies(cluster_data['PART_OF_DAY'], drop_first=False)
-
-X.columns = X.columns.add_categories('AGE_RANGE')
-X['AGE_RANGE'] =cluster_data['AGE_RANGE']
-
-from sklearn.cluster import KMeans
-
-distortions = []
-
-for i in range(1, 11):
-    km = KMeans(
-        n_clusters=i, init='random',
-        n_init=10, max_iter=300,
-        tol=1e-04, random_state=0
+    chartAge1 = alt.Chart(ac_ww).mark_bar().encode(
+        x='WW',
+        y='FREQUENCY',
+        color=alt.Color('AGE_CATEGORY', scale=alt.Scale(range=["#581845","#C70039", "#FFC300"]))
+    ).properties(
+        width=250  
     )
+    st.altair_chart(chartAge1, use_container_width=True)
+
+
+    """##### Day and Night"""
+
+    ac_dn = ld2.groupby(['AGE_CATEGORY','RACE']).size().reset_index()
+    ac_dn.rename(columns={0: 'FREQUENCY'}, inplace=True)
+
+    chartAge2 = alt.Chart(ac_dn).mark_bar().encode(
+        x='AGE_CATEGORY',
+        y='FREQUENCY',
+        color=alt.Color('RACE', scale=alt.Scale(range=["#87F5D7","#87F5A0", "#F5A087", "#F5D787"]))
+    ).properties(
+        width=250  
+    )
+
+    st.altair_chart(chartAge2, use_container_width=True)
+
+# """#### CUSTOMER TYPE: RACE
+# ##### Weekend Weekdays
+# """
+
+# r_ww = ld2.groupby(['WW','RACE']).size().reset_index()
+# r_ww.rename(columns={0: 'FREQUENCY'}, inplace=True)
+
+# chartrace1 = alt.Chart(r_ww).mark_bar().encode(
+#     x='WW',
+#     y='FREQUENCY',
+#     color=alt.Color('RACE', scale=alt.Scale(range=["#87F5D7","#87F5A0", "#F5A087", "#F5D787"]))
+# ).properties(
+#     width=250  
+# )
+
+# st.altair_chart(chartrace1, use_container_width=True)
+
+# """##### Day and Night"""
+
+# r_dn = ld2.groupby(['PART_OF_DAY','RACE']).size().reset_index()
+# r_dn.rename(columns={0: 'FREQUENCY'}, inplace=True)
+
+# chartrace2 = alt.Chart(r_dn).mark_bar().encode(
+#     x='PART_OF_DAY',
+#     y='FREQUENCY',
+#     color=alt.Color('RACE', scale=alt.Scale(range=["#87F5D7","#87F5A0", "#F5A087", "#F5D787"]))
+# ).properties(
+#     width=250  
+# )
+# st.altair_chart(chartrace2, use_container_width=True)
+
+# """#### CUSTOMER TYPE: GENDER
+# ##### Weekend and Weekdays
+# """
+
+# g_ww = ld2.groupby(['WW','GENDER']).size().reset_index()
+# g_ww.rename(columns={0: 'FREQUENCY'}, inplace=True)
+
+# chartGender1 = alt.Chart(g_ww).mark_bar().encode(
+#     x='WW',
+#     y='FREQUENCY',
+#     color=alt.Color('GENDER', scale=alt.Scale(range=["#FF5733", "#DAF7A6"]))
+# ).properties(
+#     width=250  
+# )
+
+# st.altair_chart(chartGender1, use_container_width=True)
+
+
+
+# """##### Day and Night"""
+
+# g_dn = ld2.groupby(['PART_OF_DAY','GENDER']).size().reset_index()
+# g_dn.rename(columns={0: 'FREQUENCY'}, inplace=True)
+
+# chartGender2 = alt.Chart(g_dn).mark_bar().encode(
+#     x='PART_OF_DAY',
+#     y='FREQUENCY',
+#     color=alt.Color('GENDER', scale=alt.Scale(range=["#FF5733", "#DAF7A6"]))
+# ).properties(
+#     width=250  
+# )
+
+
+# st.altair_chart(chartGender2, use_container_width=True)
+
+if(selectionCUSTCAT=='CUSTOMER WITH KIDS'):
+
+    """
+    ##### Weekend and Weekdays
+    """
+    ld2 = laundry.copy()
+
+    mappingtoWW = {'Monday': 'Weekdays','Tuesday': 'Weekdays','Wednesday': 'Weekdays','Thursday': 'Weekdays','Friday': 'Weekdays','Saturday': 'Weekend','Sunday': 'Weekend'}
+
+    ld2['WW'] = laundry['PART_OF_WEEK'].map(mappingtoWW)
+
+    # groupby age
+    ac_ww = ld2.groupby(['WW','AGE_CATEGORY']).size().reset_index()
+    ac_ww.rename(columns={0: 'FREQUENCY'}, inplace=True)
+
+    k_ww = ld2.groupby(['WW','WITH_KIDS']).size().reset_index()
+    k_ww.rename(columns={0: 'FREQUENCY'}, inplace=True)
+
+    chartWkids1 = alt.Chart(k_ww).mark_bar().encode(
+        x='WW',
+        y='FREQUENCY',
+        color=alt.Color('WITH_KIDS', scale=alt.Scale(range=["#F5D787", "#A5F587"]))
+    ).properties(
+        width=250  
+    )
+
+    st.altair_chart(chartWkids1, use_container_width=True)
+
+
+
+    """##### Days and Night"""
+
+    k_dn = ld2.groupby(['PART_OF_DAY','WITH_KIDS']).size().reset_index()
+    k_dn.rename(columns={0: 'FREQUENCY'}, inplace=True)
+
+    chartWkids2 = alt.Chart(k_dn).mark_bar().encode(
+        x='PART_OF_DAY',
+        y='FREQUENCY',
+        color=alt.Color('WITH_KIDS', scale=alt.Scale(range=["#F5D787", "#A5F587"]))
+    ).properties(
+        width=250  
+    )
+
+    st.altair_chart(chartWkids2, use_container_width=True)
+
+
+if(selectionCUSTCAT=='AGE RANGE'):
+
+    """#### CLUSTERING - AGE RANGE"""
+    ld2 = laundry.copy()
+
+    mappingtoWW = {'Monday': 'Weekdays','Tuesday': 'Weekdays','Wednesday': 'Weekdays','Thursday': 'Weekdays','Friday': 'Weekdays','Saturday': 'Weekend','Sunday': 'Weekend'}
+
+    ld2['WW'] = laundry['PART_OF_WEEK'].map(mappingtoWW)
+
+    # groupby age
+    ac_ww = ld2.groupby(['WW','AGE_CATEGORY']).size().reset_index()
+    ac_ww.rename(columns={0: 'FREQUENCY'}, inplace=True)
+
+    cluster_data = ld2[['PART_OF_DAY','AGE_RANGE']]
+
+    X = pd.get_dummies(cluster_data['PART_OF_DAY'], drop_first=False)
+
+    X.columns = X.columns.add_categories('AGE_RANGE')
+    X['AGE_RANGE'] =cluster_data['AGE_RANGE']
+
+    from sklearn.cluster import KMeans
+
+    distortions = []
+
+    for i in range(1, 11):
+        km = KMeans(
+            n_clusters=i, init='random',
+            n_init=10, max_iter=300,
+            tol=1e-04, random_state=0
+        )
+        km.fit(X)
+        distortions.append(km.inertia_)
+
+    # plot
+    st.write('Choosing number of clusters')
+    plt.plot(range(1, 11), distortions, marker='o')
+    plt.xlabel('Number of clusters')
+    plt.ylabel('Distortion')
+    plt.show()
+    st.pyplot(plt)
+    #elbow
+
+    km = KMeans(n_clusters = 3, random_state=0)
     km.fit(X)
-    distortions.append(km.inertia_)
 
-# plot
-st.write('Choosing number of clusters')
-plt.plot(range(1, 11), distortions, marker='o')
-plt.xlabel('Number of clusters')
-plt.ylabel('Distortion')
-plt.show()
-st.pyplot(plt)
-#elbow
+    cluster_data_new = cluster_data.copy()
+    cluster_data_new.insert(0, "cluster", km.labels_, True)
 
-km = KMeans(n_clusters = 3, random_state=0)
-km.fit(X)
+    cluster_0 = cluster_data_new[cluster_data_new['cluster'] == 0]
+    cluster_1 = cluster_data_new[cluster_data_new['cluster'] == 1]
+    cluster_2 = cluster_data_new[cluster_data_new['cluster'] == 2]
 
-cluster_data_new = cluster_data.copy()
-cluster_data_new.insert(0, "cluster", km.labels_, True)
+    mappingtoplot2 = {0: '48 - 55', 1: '28 - 37', 2: '38 - 47'}
 
-cluster_0 = cluster_data_new[cluster_data_new['cluster'] == 0]
-cluster_1 = cluster_data_new[cluster_data_new['cluster'] == 1]
-cluster_2 = cluster_data_new[cluster_data_new['cluster'] == 2]
+    cluster_data_plot = cluster_data_new.copy()
+    cluster_data_plot['cluster'] = cluster_data_plot['cluster'].map(mappingtoplot2)
 
-mappingtoplot2 = {0: '48 - 55', 1: '28 - 37', 2: '38 - 47'}
-
-cluster_data_plot = cluster_data_new.copy()
-cluster_data_plot['cluster'] = cluster_data_plot['cluster'].map(mappingtoplot2)
-
-chart = alt.Chart(cluster_data_plot).mark_bar().encode(
-    alt.X('cluster', axis=alt.Axis(title=None, labels=False)),
-    alt.Y('count(AGE_RANGE)'),
-    alt.Column('PART_OF_DAY'),
-    alt.Color('cluster', scale=alt.Scale(range=["#AAFF00","#097969", "#454B1B"]))
-).properties(
-    width=200  
-)
-st.write('Clustering result')
-chart
+    chart = alt.Chart(cluster_data_plot).mark_bar().encode(
+        alt.X('cluster', axis=alt.Axis(title=None, labels=False)),
+        alt.Y('count(AGE_RANGE)'),
+        alt.Column('PART_OF_DAY'),
+        alt.Color('cluster', scale=alt.Scale(range=["#AAFF00","#097969", "#454B1B"]))
+    ).properties(
+        width=200  
+    )
+    st.write('Clustering result')
+    chart
 
 
 """### 3. What is the common attire worn by the customer (attire, shirt color, shirt type, pants color, pants type)?"""
@@ -444,72 +544,121 @@ casual = customerAttire[customerAttire['ATTIRE'] == 'casual'].reset_index()
 formal = customerAttire[customerAttire['ATTIRE'] == 'formal'].reset_index()
 traditional = customerAttire[customerAttire['ATTIRE'] == 'traditional'].reset_index()
 
-"""#### a. Casual Attire"""
+selectionattire = st.selectbox('Select type of attire:',['Casual','Formal', 'Traditional'])
 
-st.write("=====================================")
-casualAttire = top5clothes(casual)
+if(selectionattire=='Casual'):
+    """#### a. Casual Attire"""
 
-"""#### b. Formal Attire"""
+    st.write("=====================================")
+    casualAttire = top5clothes(casual)
 
-st.write("=====================================")
-formalAttire = top5clothes(formal)
-print (formalAttire)
+if(selectionattire=='Formal'):
+    """#### b. Formal Attire"""
 
-""" #### c. Traditional Attire"""
+    st.write("=====================================")
+    formalAttire = top5clothes(formal)
 
-st.write("=====================================")
-traditionalAttire = top5clothes(traditional)
-print (traditionalAttire)
+if(selectionattire=='Traditional'):
+    """ #### c. Traditional Attire"""
 
-"""### 4. Customers wear short sleeves during the day and long sleeves during the night. Prove the hypothesis"""
+    st.write("=====================================")
+    traditionalAttire = top5clothes(traditional)
 
-shirt = laundry.groupby(['PART_OF_DAY', 'SHIRT_TYPE']).size().reset_index()
-shirt = shirt.rename(columns={0:'FREQUENCY'})
+# """### 4. Customers wear short sleeves during the day and long sleeves during the night. Prove the hypothesis"""
 
-q4 = alt.Chart(shirt).mark_bar().encode(
-    x='PART_OF_DAY:O',
-    y='FREQUENCY:Q',
-    color='SHIRT_TYPE:N',
-    column='SHIRT_TYPE:N'
-)
-st.altair_chart(q4, use_container_width=False)
+# shirt = laundry.groupby(['PART_OF_DAY', 'SHIRT_TYPE']).size().reset_index()
+# shirt = shirt.rename(columns={0:'FREQUENCY'})
+
+# q4 = alt.Chart(shirt).mark_bar().encode(
+#     x='PART_OF_DAY:O',
+#     y='FREQUENCY:Q',
+#     color='SHIRT_TYPE:N',
+#     column='SHIRT_TYPE:N'
+# )
+# st.altair_chart(q4, use_container_width=False)
 
 
-"""### 5. Frequency usage for washer and dryer per month
-
-#### WASHER
+"""### 4. Frequency usage for washer and dryer per month
 """
+selectionq4 = st.selectbox('Select type of analysis:',['WASHER','DRYER'])
 
-temp = laundryAnalaysis.copy()
-temp['WASHER_NO'] = temp['WASHER_NO'].apply(lambda x: 1)
-temp['DRYER_NO'] = temp['DRYER_NO'].apply(lambda x: 1)
-temp['MONTH'] = temp['DATE'].dt.month
+if(selectionq4=='WASHER'):
+    """
+    #### WASHER
+    """
 
-a = temp[temp['MONTH']==11].groupby(['DATE','WASHER_NO']).size().unstack()
-a.reset_index(inplace=True)
-a.rename(columns={'DATE': 'DATE', 1: 'FREQUENCY'}, inplace=True)
-st.write('Frequency of washer used per month is: ', a['FREQUENCY'].sum())
+    temp = laundryAnalaysis.copy()
+    temp['MONTH'] = temp['DATE'].dt.month
+    a = temp[temp['MONTH']==11]
 
-q51 = alt.Chart(a).mark_bar().encode(
-    x='DATE',
-    y='FREQUENCY',
-)
-st.altair_chart(q51, use_container_width=True)
+    a = a['WASHER_NO'].value_counts()
+    washerFreq = pd.DataFrame(data=a)
+    washerFreq['index1'] = washerFreq.index
+    washerFreq.reset_index(drop=True, inplace=True)
+    washerFreq.columns = ['FREQUENCY','WASHER_NO']
+    washerFreq = washerFreq[['WASHER_NO', 'FREQUENCY']]
+    st.write('Frequency of washer used per month is: ', washerFreq['FREQUENCY'].sum())
 
-"""#### DRYER"""
+    washerFreq['WASHER_NO'] = washerFreq['WASHER_NO'].astype(str)
+    bars = alt.Chart(washerFreq).mark_bar().encode(
+        x='WASHER_NO',
+        y='FREQUENCY',
+        color=alt.Color('WASHER_NO')
 
-b = temp[temp['MONTH']==11].groupby(['DATE','DRYER_NO']).size().unstack()
-b.reset_index(inplace=True)
-b.rename(columns={'DATE': 'DATE', 1: 'FREQUENCY'}, inplace=True)
-st.write('Frequency of dryer used per month is: ', b['FREQUENCY'].sum())
+    ).properties(
+        width=700,
+        height=500
+    )
 
-q52 = alt.Chart(b).mark_bar().encode(
-    x='DATE',
-    y='FREQUENCY',
-)
-st.altair_chart(q52, use_container_width=True)
+    text = bars.mark_text(
+        align='left',
+        baseline='middle',
+        dy=-10  # Nudges text to right so it doesn't appear on top of the bar
+    ).encode(
+        text='FREQUENCY'
+    )
+    q5wahser = bars + text
 
-"""### 6. Which dryer and washing machine are frequently used together? """
+    st.altair_chart(q5wahser, use_container_width=True)
+
+if(selectionq4=='DRYER'):
+
+    """#### DRYER"""
+    temp = laundryAnalaysis.copy()
+    temp['MONTH'] = temp['DATE'].dt.month
+    a = temp[temp['MONTH']==11]
+
+    a = a['DRYER_NO'].value_counts()
+    washerFreq = pd.DataFrame(data=a)
+    washerFreq['index1'] = washerFreq.index
+    washerFreq.reset_index(drop=True, inplace=True)
+    washerFreq.columns = ['FREQUENCY','DRYER_NO']
+    washerFreq = washerFreq[['DRYER_NO', 'FREQUENCY']]
+    st.write('Frequency of dryer used per month is: ', washerFreq['FREQUENCY'].sum())
+
+    washerFreq['DRYER_NO'] = washerFreq['DRYER_NO'].astype(str)
+    bars = alt.Chart(washerFreq).mark_bar().encode(
+        x='DRYER_NO',
+        y='FREQUENCY',
+        color=alt.Color('DRYER_NO')
+
+    ).properties(
+        width=700,
+        height=500
+    )
+
+    text = bars.mark_text(
+        align='left',
+        baseline='middle',
+        dy=-10  # Nudges text to right so it doesn't appear on top of the bar
+    ).encode(
+        text='FREQUENCY'
+    )
+    q5dryer = bars + text
+
+    st.altair_chart(q5dryer, use_container_width=True)
+
+"""### 5. Which dryer and washing machine are frequently used together? """
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -548,150 +697,165 @@ for item in association_results:
     st.write("Lift: " + str(round(item[2][0][3],4)))
     st.write("=====================================")
 
-"""### 7. What are the potential locations to open a new laundry based on the population of housing areas?
-
-#### Overall
+"""### 6. What are the potential locations to open a new laundry based on the population of housing areas?
 """
 
-topOverall = residentalLocationAnalysis.sort_values(by=['NUMBER_OF_HOUSES'],ascending=False)
-topOverall = residentalLocationAnalysis.sort_values(by=['NUMBER_OF_HOUSES'],ascending=False)
-topOverall = topOverall.iloc[:10,:]
-topOverall['RESIDENTAL_AREA_STATE'] = topOverall["RESIDENTAL_AREA"] + "," + topOverall["STATE"]
+selectionq6 = st.selectbox('Select type of attire:',['Overall','Kelantan', 'Negeri Sembilan','Pahang','Perak'])
 
-locationOverall = alt.Chart(topOverall).mark_bar().encode(
-    y='RESIDENTAL_AREA_STATE',
-    x='NUMBER_OF_HOUSES',
-    color=alt.condition(
-        alt.datum.NUMBER_OF_HOUSES >= 4000,  # If the year is 1810 this test returns True,
-        alt.value('green'),     # which sets the bar orange.
-        alt.value('steelblue')   # And if it's not true it sets the bar steelblue.
+if(selectionq6=='Overall'):
+    """
+
+    #### Overall
+    """
+
+    topOverall = residentalLocationAnalysis.sort_values(by=['NUMBER_OF_HOUSES'],ascending=False)
+    topOverall = residentalLocationAnalysis.sort_values(by=['NUMBER_OF_HOUSES'],ascending=False)
+    topOverall = topOverall.iloc[:10,:]
+    topOverall['RESIDENTAL_AREA_STATE'] = topOverall["RESIDENTAL_AREA"] + "," + topOverall["STATE"]
+
+    locationOverall = alt.Chart(topOverall).mark_bar().encode(
+        y='RESIDENTAL_AREA_STATE',
+        x='NUMBER_OF_HOUSES',
+        color=alt.condition(
+            alt.datum.NUMBER_OF_HOUSES >= 4000,  # If the year is 1810 this test returns True,
+            alt.value('green'),     # which sets the bar orange.
+            alt.value('steelblue')   # And if it's not true it sets the bar steelblue.
+        )
     )
-)
 
-text = locationOverall.mark_text( 
-    align='left',
-    baseline='middle',
-    dx=5  
-).encode(
-    text='NUMBER_OF_HOUSES'
-)
-
-left = alt.Chart(locationOverall).mark_text().encode(
-    alt.Y('STATE', sort=alt.EncodingSortField('PERCENT', order="descending"), title=None)
-)
-
-locationOverall = (locationOverall + text).properties(height=500, width=700)
-
-st.altair_chart(locationOverall, use_container_width=True)
-"""#### Kelantan"""
-
-topKelantan = residentalLocationAnalysis[residentalLocationAnalysis['STATE']=='Kelantan'].sort_values(by=['NUMBER_OF_HOUSES'],ascending=False)
-topKelantan = topKelantan.iloc[:10,:]
-
-locationKelantan = alt.Chart(topKelantan).mark_bar().encode(
-    y='RESIDENTAL_AREA',
-    x='NUMBER_OF_HOUSES',
-    color=alt.condition(
-        alt.datum.NUMBER_OF_HOUSES >= 900,  # If the year is 1810 this test returns True,
-        alt.value('green'),     # which sets the bar orange.
-        alt.value('steelblue')   # And if it's not true it sets the bar steelblue.
+    text = locationOverall.mark_text( 
+        align='left',
+        baseline='middle',
+        dx=5  
+    ).encode(
+        text='NUMBER_OF_HOUSES'
     )
-)
 
-text = locationKelantan.mark_text( 
-    align='left',
-    baseline='middle',
-    dx=5  
-).encode(
-    text='NUMBER_OF_HOUSES'
-)
-
-locationKelantan = (locationKelantan + text).properties(height=500, width=700)
-
-st.altair_chart(locationKelantan, use_container_width=True)
-
-"""#### Negeri Sembilan"""
-
-topN9 = residentalLocationAnalysis[residentalLocationAnalysis['STATE']=='Negeri Sembilan'].sort_values(by=['NUMBER_OF_HOUSES'],ascending=False)
-topN9 = topN9.iloc[:10,:]
-
-locationN9 = alt.Chart(topN9).mark_bar().encode(
-    y='RESIDENTAL_AREA',
-    x='NUMBER_OF_HOUSES',
-    color=alt.condition(
-        alt.datum.NUMBER_OF_HOUSES >= 4000,  # If the year is 1810 this test returns True,
-        alt.value('green'),     # which sets the bar orange.
-        alt.value('steelblue')   # And if it's not true it sets the bar steelblue.
+    left = alt.Chart(locationOverall).mark_text().encode(
+        alt.Y('STATE', sort=alt.EncodingSortField('PERCENT', order="descending"), title=None)
     )
-)
 
-text = locationN9.mark_text( 
-    align='left',
-    baseline='middle',
-    dx=5  
-).encode(
-    text='NUMBER_OF_HOUSES'
-)
+    locationOverall = (locationOverall + text).properties(height=500, width=700)
 
-locationN9 = (locationN9 + text).properties(height=500, width=700)
+    st.altair_chart(locationOverall, use_container_width=True)
 
-st.altair_chart(locationN9, use_container_width=True)
+if(selectionq6=='Kelantan'):
 
-"""#### Pahang"""
+    """#### Kelantan"""
 
-topPahang = residentalLocationAnalysis[residentalLocationAnalysis['STATE']=='Pahang'].sort_values(by=['NUMBER_OF_HOUSES'],ascending=False)
-topPahang = topPahang.iloc[:10,:]
+    topKelantan = residentalLocationAnalysis[residentalLocationAnalysis['STATE']=='Kelantan'].sort_values(by=['NUMBER_OF_HOUSES'],ascending=False)
+    topKelantan = topKelantan.iloc[:10,:]
 
-locationPahang = alt.Chart(topPahang).mark_bar().encode(
-    y='RESIDENTAL_AREA',
-    x='NUMBER_OF_HOUSES',
-    color=alt.condition(
-        alt.datum.NUMBER_OF_HOUSES >= 400,  # If the year is 1810 this test returns True,
-        alt.value('green'),     # which sets the bar orange.
-        alt.value('steelblue')   # And if it's not true it sets the bar steelblue.
+    locationKelantan = alt.Chart(topKelantan).mark_bar().encode(
+        y='RESIDENTAL_AREA',
+        x='NUMBER_OF_HOUSES',
+        color=alt.condition(
+            alt.datum.NUMBER_OF_HOUSES >= 900,  # If the year is 1810 this test returns True,
+            alt.value('green'),     # which sets the bar orange.
+            alt.value('steelblue')   # And if it's not true it sets the bar steelblue.
+        )
     )
-)
 
-text = locationPahang.mark_text( 
-    align='left',
-    baseline='middle',
-    dx=5  
-).encode(
-    text='NUMBER_OF_HOUSES'
-)
-
-locationPahang = (locationPahang + text).properties(height=500, width=700)
-
-st.altair_chart(locationPahang, use_container_width=True)
-
-"""#### Perak
-
-"""
-
-topPerak = residentalLocationAnalysis[residentalLocationAnalysis['STATE']=='Perak'].sort_values(by=['NUMBER_OF_HOUSES'],ascending=False)
-topPerak = topPerak.iloc[:10,:]
-
-locationPerak = alt.Chart(topPerak).mark_bar().encode(
-    y='RESIDENTAL_AREA',
-    x='NUMBER_OF_HOUSES',
-    color=alt.condition(
-        alt.datum.NUMBER_OF_HOUSES >= 100,  # If the year is 1810 this test returns True,
-        alt.value('green'),     # which sets the bar orange.
-        alt.value('steelblue')   # And if it's not true it sets the bar steelblue.
+    text = locationKelantan.mark_text( 
+        align='left',
+        baseline='middle',
+        dx=5  
+    ).encode(
+        text='NUMBER_OF_HOUSES'
     )
-)
 
-text = locationPerak.mark_text( 
-    align='left',
-    baseline='middle',
-    dx=5  
-).encode(
-    text='NUMBER_OF_HOUSES'
-)
+    locationKelantan = (locationKelantan + text).properties(height=500, width=700)
 
-locationPerak = (locationPerak + text).properties(height=500, width=700)
+    st.altair_chart(locationKelantan, use_container_width=True)
 
-st.altair_chart(locationPerak, use_container_width=True)
+if(selectionq6=='Negeri Sembilan'):
+
+    """#### Negeri Sembilan"""
+
+    topN9 = residentalLocationAnalysis[residentalLocationAnalysis['STATE']=='Negeri Sembilan'].sort_values(by=['NUMBER_OF_HOUSES'],ascending=False)
+    topN9 = topN9.iloc[:10,:]
+
+    locationN9 = alt.Chart(topN9).mark_bar().encode(
+        y='RESIDENTAL_AREA',
+        x='NUMBER_OF_HOUSES',
+        color=alt.condition(
+            alt.datum.NUMBER_OF_HOUSES >= 4000,  # If the year is 1810 this test returns True,
+            alt.value('green'),     # which sets the bar orange.
+            alt.value('steelblue')   # And if it's not true it sets the bar steelblue.
+        )
+    )
+
+    text = locationN9.mark_text( 
+        align='left',
+        baseline='middle',
+        dx=5  
+    ).encode(
+        text='NUMBER_OF_HOUSES'
+    )
+
+    locationN9 = (locationN9 + text).properties(height=500, width=700)
+
+    st.altair_chart(locationN9, use_container_width=True)
+
+if(selectionq6=='Pahang'):
+
+    """#### Pahang"""
+
+    topPahang = residentalLocationAnalysis[residentalLocationAnalysis['STATE']=='Pahang'].sort_values(by=['NUMBER_OF_HOUSES'],ascending=False)
+    topPahang = topPahang.iloc[:10,:]
+
+    locationPahang = alt.Chart(topPahang).mark_bar().encode(
+        y='RESIDENTAL_AREA',
+        x='NUMBER_OF_HOUSES',
+        color=alt.condition(
+            alt.datum.NUMBER_OF_HOUSES >= 400,  # If the year is 1810 this test returns True,
+            alt.value('green'),     # which sets the bar orange.
+            alt.value('steelblue')   # And if it's not true it sets the bar steelblue.
+        )
+    )
+
+    text = locationPahang.mark_text( 
+        align='left',
+        baseline='middle',
+        dx=5  
+    ).encode(
+        text='NUMBER_OF_HOUSES'
+    )
+
+    locationPahang = (locationPahang + text).properties(height=500, width=700)
+
+    st.altair_chart(locationPahang, use_container_width=True)
+
+if(selectionq6=='Perak'):
+
+    """#### Perak
+
+    """
+
+    topPerak = residentalLocationAnalysis[residentalLocationAnalysis['STATE']=='Perak'].sort_values(by=['NUMBER_OF_HOUSES'],ascending=False)
+    topPerak = topPerak.iloc[:10,:]
+
+    locationPerak = alt.Chart(topPerak).mark_bar().encode(
+        y='RESIDENTAL_AREA',
+        x='NUMBER_OF_HOUSES',
+        color=alt.condition(
+            alt.datum.NUMBER_OF_HOUSES >= 100,  # If the year is 1810 this test returns True,
+            alt.value('green'),     # which sets the bar orange.
+            alt.value('steelblue')   # And if it's not true it sets the bar steelblue.
+        )
+    )
+
+    text = locationPerak.mark_text( 
+        align='left',
+        baseline='middle',
+        dx=5  
+    ).encode(
+        text='NUMBER_OF_HOUSES'
+    )
+
+    locationPerak = (locationPerak + text).properties(height=500, width=700)
+
+    st.altair_chart(locationPerak, use_container_width=True)
 
 """### 8. What is the customer body size for the dryer and washing machine?"""
 
@@ -716,7 +880,7 @@ merged_df = pd.concat([rule1, rule2, rule3, rule4]).reset_index(drop=True)
 
 bodySize = merged_df.groupby(['BODY_SIZE', 'RULE']).size().reset_index()
 bodySize = bodySize.rename(columns={0:'FREQUENCY'})
-
+st.dataframe(bodySize)
 q8 = alt.Chart(bodySize).mark_bar().encode(
     x='BODY_SIZE:O',
     y='FREQUENCY:Q',
@@ -725,56 +889,57 @@ q8 = alt.Chart(bodySize).mark_bar().encode(
 )
 st.altair_chart(q8, use_container_width=False)
 
-"""### 9. Do female customers often come with kids ? """
+# """### 9. Do female customers often come with kids ? """
 
-femaleWithKids = laundry[laundry['GENDER'] == 'female'] 
+# femaleWithKids = laundry[laundry['GENDER'] == 'female'] 
 
-femaleWithKids = femaleWithKids.groupby(['WITH_KIDS']).size().reset_index()
-femaleWithKids = femaleWithKids.rename(columns={0:'FREQUENCY'})
+# femaleWithKids = femaleWithKids.groupby(['WITH_KIDS']).size().reset_index()
+# femaleWithKids = femaleWithKids.rename(columns={0:'FREQUENCY'})
 
-q9 = alt.Chart(femaleWithKids).mark_bar().encode(
-    x='WITH_KIDS:O',
-    y="FREQUENCY:Q",
-    # The highlight will be set on the result of a conditional statement
-    color=alt.condition(
-        alt.datum.WITH_KIDS == 'yes',  
-        alt.value('orange'),     
-        alt.value('steelblue')   
-    )
-).properties(width=600)
-st.altair_chart(q9, use_container_width=True)
+# q9 = alt.Chart(femaleWithKids).mark_bar().encode(
+#     x='WITH_KIDS:O',
+#     y="FREQUENCY:Q",
+#     # The highlight will be set on the result of a conditional statement
+#     color=alt.condition(
+#         alt.datum.WITH_KIDS == 'yes',  
+#         alt.value('orange'),     
+#         alt.value('steelblue')   
+#     )
+# ).properties(width=600)
+# st.altair_chart(q9, use_container_width=True)
 
-"""### 10. Is there any particular interesting relationship between the features? """
+# """### 10. Is there any particular interesting relationship between the features? """
 
-from sklearn.preprocessing import LabelEncoder
+# from sklearn.preprocessing import LabelEncoder
 
-ld3 = laundry.copy()
-ld3['SPECTACLES'] = LabelEncoder().fit_transform(ld3.SPECTACLES)
-ld3['RACE'] = LabelEncoder().fit_transform(ld3.RACE)
-ld3['GENDER'] = LabelEncoder().fit_transform(ld3.GENDER)
-ld3['BODY_SIZE'] = LabelEncoder().fit_transform(ld3.BODY_SIZE)
-ld3['AGE_CATEGORY'] = LabelEncoder().fit_transform(ld3.AGE_CATEGORY)
-ld3['WITH_KIDS'] = LabelEncoder().fit_transform(ld3.WITH_KIDS)
-ld3['KIDS_CATEGORY'] = LabelEncoder().fit_transform(ld3.KIDS_CATEGORY)
-ld3['BASKET_SIZE'] = LabelEncoder().fit_transform(ld3.BASKET_SIZE)
-ld3['BASKET_COLOUR'] = LabelEncoder().fit_transform(ld3.BASKET_COLOUR)
-ld3['ATTIRE'] = LabelEncoder().fit_transform(ld3.ATTIRE)
-ld3['SHIRT_COLOUR'] = LabelEncoder().fit_transform(ld3.SHIRT_COLOUR)
-ld3['SHIRT_TYPE'] = LabelEncoder().fit_transform(ld3.SHIRT_TYPE)
-ld3['PANTS_COLOUR'] = LabelEncoder().fit_transform(ld3.PANTS_COLOUR)
-ld3['PANTS_TYPE'] = LabelEncoder().fit_transform(ld3.PANTS_TYPE)
-ld3['WASH_ITEM'] = LabelEncoder().fit_transform(ld3.WASH_ITEM)
-ld3['PART_OF_DAY'] = LabelEncoder().fit_transform(ld3.PART_OF_DAY)
-ld3['PART_OF_WEEK'] = LabelEncoder().fit_transform(ld3.PART_OF_WEEK)
+# ld3 = laundry.copy()
+# ld3['SPECTACLES'] = LabelEncoder().fit_transform(ld3.SPECTACLES)
+# ld3['RACE'] = LabelEncoder().fit_transform(ld3.RACE)
+# ld3['GENDER'] = LabelEncoder().fit_transform(ld3.GENDER)
+# ld3['BODY_SIZE'] = LabelEncoder().fit_transform(ld3.BODY_SIZE)
+# ld3['AGE_CATEGORY'] = LabelEncoder().fit_transform(ld3.AGE_CATEGORY)
+# ld3['WITH_KIDS'] = LabelEncoder().fit_transform(ld3.WITH_KIDS)
+# ld3['KIDS_CATEGORY'] = LabelEncoder().fit_transform(ld3.KIDS_CATEGORY)
+# ld3['BASKET_SIZE'] = LabelEncoder().fit_transform(ld3.BASKET_SIZE)
+# ld3['BASKET_COLOUR'] = LabelEncoder().fit_transform(ld3.BASKET_COLOUR)
+# ld3['ATTIRE'] = LabelEncoder().fit_transform(ld3.ATTIRE)
+# ld3['SHIRT_COLOUR'] = LabelEncoder().fit_transform(ld3.SHIRT_COLOUR)
+# ld3['SHIRT_TYPE'] = LabelEncoder().fit_transform(ld3.SHIRT_TYPE)
+# ld3['PANTS_COLOUR'] = LabelEncoder().fit_transform(ld3.PANTS_COLOUR)
+# ld3['PANTS_TYPE'] = LabelEncoder().fit_transform(ld3.PANTS_TYPE)
+# ld3['WASH_ITEM'] = LabelEncoder().fit_transform(ld3.WASH_ITEM)
+# ld3['PART_OF_DAY'] = LabelEncoder().fit_transform(ld3.PART_OF_DAY)
+# ld3['PART_OF_WEEK'] = LabelEncoder().fit_transform(ld3.PART_OF_WEEK)
 
-q10 = ld3.drop(['NO', 'DATE', 'TIME'], axis=1)
-q10corr = q10.corr().abs()
-plt.figure(figsize=(13,13))
-sns.heatmap(q10corr, vmax=.8, square=True, annot=True, fmt='.2f', annot_kws={'size':10}, cmap=sns.color_palette("Reds"))
-st.set_option('deprecation.showPyplotGlobalUse', False)
-st.pyplot()
+# q10 = ld3.drop(['NO', 'DATE', 'TIME'], axis=1)
+# q10corr = q10.corr().abs()
+# plt.figure(figsize=(13,13))
+# sns.heatmap(q10corr, vmax=.8, square=True, annot=True, fmt='.2f', annot_kws={'size':10}, cmap=sns.color_palette("Reds"))
+# st.set_option('deprecation.showPyplotGlobalUse', False)
+# st.pyplot()
 section_separator()
-"""# Feature Selection"""
+"""# Feature Selection
+"""
 
 from sklearn.ensemble import RandomForestClassifier
 from boruta import BorutaPy
@@ -807,7 +972,7 @@ df_oh = df_oh.apply(LabelEncoder().fit_transform)
 df_FS = pd.concat([df_FS, df_oh], axis=1)
 df_FS = df_FS.drop(['NO'],axis=1)
 st.dataframe(df_FS)
-"""### 1. What is the feature selection technique used? And Why?
+"""### What is the feature selection technique used? And Why?
 
 Feature selection used: BORUTA
 
@@ -830,7 +995,7 @@ X_AGE = df_FS.drop('AGE_RANGE', axis=1)
 # feat_selector_AGE = BorutaPy(rf, n_estimators="auto", random_state=1)
 # feat_selector_AGE.fit(X_AGE.values, y_AGE.values.ravel())
 
-"""### 2. How should I obtain the optimal feature set?
+"""### How should I obtain the optimal feature set?
 
 Ans: Obtaining Top features that has the BORUTA score >= 0.6
 
@@ -877,13 +1042,77 @@ partDaytop10 = ['PART_OF_WEEK','DATE','TIME','AGE_RANGE','PANTS_COLOUR','RACE','
 X_partDay = df_FS[partDaytop10]
 y_partDay = df_FS['PART_OF_DAY']
 
+"""### Do I need to perform data imbalance treatment?
+Method used: SMOTE
+
+Y = PART_OF_DAY
+
+BEFORE SMOTING
+"""
+a = df_FS["PART_OF_DAY"].value_counts()
+df = pd.DataFrame()
+df['x'] = a.index.astype(str)
+df['y'] = a.values
+df
+bar = alt.Chart(df).mark_bar(size=100).encode(
+    x='x',
+    y='y',
+    color='x'
+).properties(width=300,height=300)
+
+text = bar.mark_text(
+    align='left',
+    baseline='middle',
+    dy=-10  # Nudges text to right so it doesn't appear on top of the bar
+).encode(
+    text='y'
+)
+
+after = bar+text
+
+st.altair_chart(after, use_container_width=True)
+
 smt = SMOTE(random_state=42)
 X_res, y_res = smt.fit_resample(X_partDay, y_partDay)
 
 X_train, X_test, y_train, y_test = train_test_split(X_res, y_res, test_size=0.4, random_state=10)
-section_separator()
-"""# Model Building
 
+"""
+
+AFTER SMOTING
+"""
+# after oversampling with SMOTE
+print(y_res.value_counts())
+
+a = y_res.value_counts()
+df = pd.DataFrame()
+df['x'] = a.index.astype(str)
+df['y'] = a.values
+df
+bar = alt.Chart(df).mark_bar(size=100).encode(
+    x='x',
+    y='y',
+    color='x'
+).properties(width=300,height=300)
+
+text = bar.mark_text(
+    align='left',
+    baseline='middle',
+    dy=-10  # Nudges text to right so it doesn't appear on top of the bar
+).encode(
+    text='y'
+)
+
+after = bar+text
+st.altair_chart(after, use_container_width=True)
+
+
+section_separator()
+
+"""# Model building
+"""
+
+"""
 ## Classification Model
 Given the features, predict which part of the day does customer visit the laundry ?
 
@@ -1039,7 +1268,12 @@ roc_line = alt.Chart(roc_df_SMOTED).mark_line(color = 'red').encode(
 smotedDT = roc_line + baseline.properties(title='Decision Tree (SMOTED) ROC curve ').interactive()
 st.altair_chart(smotedDT, use_container_width=True)
 
-"""## Regression Model"""
+"""## Regression Model
+Given the features, predict what is the age of the customer that visit the laundry ?
+
+
+"""
+
 
 """### Linear Regression, Decision Tree Regressor and SVM (rbf, poly, linear)"""
 
