@@ -7,6 +7,8 @@ from streamlit_folium import folium_static
 import folium
 from sklearn.preprocessing import MinMaxScaler
 from io import StringIO
+import time
+
 
 
 import pandas as pd
@@ -54,30 +56,59 @@ section_separator()
 """
 
 # main dataset
-laundry = pd.read_csv('LaundryData.csv') 
-laundry.columns = map(str.upper, laundry.columns)
+# laundry = pd.read_csv('LaundryData.csv') 
+# laundry.columns = map(str.upper, laundry.columns)
+# st.text("Laundry Dataset")
+# laundry
+@st.cache 
+def getMainDataset():
+    laundry = pd.read_csv('LaundryData.csv') 
+    laundry.columns = map(str.upper, laundry.columns)
+    return laundry
+
+laundry = getMainDataset();
 st.text("Laundry Dataset")
 laundry
 
 """### Additional dataset"""
 
 # import additional dataset: Taman perumahan by state = kel, n9,phg, prk
-residentsKelantan = pd.read_excel('TamanPerumahan/KELANTAN.xlsx', skiprows=3)
+# residentsKelantan = pd.read_excel('TamanPerumahan/KELANTAN.xlsx', skiprows=3)
+# residentsKelantan = residentsKelantan.iloc[:563,:]
+# residentsKelantan2 = residentsKelantan.copy()
+
+# test2 = residentsKelantan2.astype(str)
+# # residentsKelantan
+# residentsPerak = pd.read_excel('TamanPerumahan/PENGKALANHULU.xlsx', skiprows=3)
+# residentsPerak = residentsPerak.iloc[:23,:]
+
+# residentsPahang = pd.read_excel('TamanPerumahan/PAHANG.xlsx', skiprows=2)
+# residentsPahang = residentsPahang.iloc[:40,:]
+
+# residentsN9 = pd.read_csv('TamanPerumahan/NEGERISEMBILAN.csv', encoding='cp1252')
+@st.cache 
+def getAddADataset():
+    residentsKelantan = pd.read_excel('TamanPerumahan/KELANTAN.xlsx', skiprows=3)
+    residentsKelantan = residentsKelantan.iloc[:563,:]
+    residentsKelantan2 = residentsKelantan.copy()
+
+    test2 = residentsKelantan2.astype(str)
+    # residentsKelantan
+    residentsPerak = pd.read_excel('TamanPerumahan/PENGKALANHULU.xlsx', skiprows=3)
+    residentsPerak = residentsPerak.iloc[:23,:]
+
+    residentsPahang = pd.read_excel('TamanPerumahan/PAHANG.xlsx', skiprows=2)
+    residentsPahang = residentsPahang.iloc[:40,:]
+
+    residentsN9 = pd.read_csv('TamanPerumahan/NEGERISEMBILAN.csv', encoding='cp1252')
+    return residentsKelantan, residentsPerak,residentsPahang,residentsN9
+
+
+residentsKelantan, residentsPerak,residentsPahang,residentsN9 = getAddADataset()
 residentsKelantan = residentsKelantan.iloc[:563,:]
 residentsKelantan2 = residentsKelantan.copy()
-
 test2 = residentsKelantan2.astype(str)
-# residentsKelantan
-residentsPerak = pd.read_excel('TamanPerumahan/PENGKALANHULU.xlsx', skiprows=3)
-residentsPerak = residentsPerak.iloc[:23,:]
 
-residentsPahang = pd.read_excel('TamanPerumahan/PAHANG.xlsx', skiprows=2)
-residentsPahang = residentsPahang.iloc[:40,:]
-
-residentsN9 = pd.read_csv('TamanPerumahan/NEGERISEMBILAN.csv', encoding='cp1252')
-
-
-additionalDatasetList = []
 selection = st.selectbox('Select state:',['Kelantan','Negeri Sembilan', 'Pahang','Perak'])
 if(selection=='Kelantan'):
     st.dataframe(test2)
@@ -88,6 +119,21 @@ if(selection=='Pahang'):
 if(selection=='Perak'):
     st.dataframe(residentsPerak)
 
+
+# @st.cache(suppress_st_warning=True)
+# def additionalDatasetShow():
+#     selection = st.selectbox('Select state:',['Kelantan','Negeri Sembilan', 'Pahang','Perak'])
+#     time.sleep(2)  # This makes the function take 2s to run
+#     if(selection=='Kelantan'):
+#         st.dataframe(test2)
+#     if(selection=='Negeri Sembilan'):
+#         st.dataframe(residentsN9)
+#     if(selection=='Pahang'):
+#         st.dataframe(residentsPahang)
+#     if(selection=='Perak'):
+#         st.dataframe(residentsPerak)
+
+# additionalDatasetShow()
 
 
 
@@ -311,71 +357,6 @@ if(selectionCUSTCAT=='AGE CATEGORY'):
 
     st.altair_chart(chartAge2, use_container_width=True)
 
-# """#### CUSTOMER TYPE: RACE
-# ##### Weekend Weekdays
-# """
-
-# r_ww = ld2.groupby(['WW','RACE']).size().reset_index()
-# r_ww.rename(columns={0: 'FREQUENCY'}, inplace=True)
-
-# chartrace1 = alt.Chart(r_ww).mark_bar().encode(
-#     x='WW',
-#     y='FREQUENCY',
-#     color=alt.Color('RACE', scale=alt.Scale(range=["#87F5D7","#87F5A0", "#F5A087", "#F5D787"]))
-# ).properties(
-#     width=250  
-# )
-
-# st.altair_chart(chartrace1, use_container_width=True)
-
-# """##### Day and Night"""
-
-# r_dn = ld2.groupby(['PART_OF_DAY','RACE']).size().reset_index()
-# r_dn.rename(columns={0: 'FREQUENCY'}, inplace=True)
-
-# chartrace2 = alt.Chart(r_dn).mark_bar().encode(
-#     x='PART_OF_DAY',
-#     y='FREQUENCY',
-#     color=alt.Color('RACE', scale=alt.Scale(range=["#87F5D7","#87F5A0", "#F5A087", "#F5D787"]))
-# ).properties(
-#     width=250  
-# )
-# st.altair_chart(chartrace2, use_container_width=True)
-
-# """#### CUSTOMER TYPE: GENDER
-# ##### Weekend and Weekdays
-# """
-
-# g_ww = ld2.groupby(['WW','GENDER']).size().reset_index()
-# g_ww.rename(columns={0: 'FREQUENCY'}, inplace=True)
-
-# chartGender1 = alt.Chart(g_ww).mark_bar().encode(
-#     x='WW',
-#     y='FREQUENCY',
-#     color=alt.Color('GENDER', scale=alt.Scale(range=["#FF5733", "#DAF7A6"]))
-# ).properties(
-#     width=250  
-# )
-
-# st.altair_chart(chartGender1, use_container_width=True)
-
-
-
-# """##### Day and Night"""
-
-# g_dn = ld2.groupby(['PART_OF_DAY','GENDER']).size().reset_index()
-# g_dn.rename(columns={0: 'FREQUENCY'}, inplace=True)
-
-# chartGender2 = alt.Chart(g_dn).mark_bar().encode(
-#     x='PART_OF_DAY',
-#     y='FREQUENCY',
-#     color=alt.Color('GENDER', scale=alt.Scale(range=["#FF5733", "#DAF7A6"]))
-# ).properties(
-#     width=250  
-# )
-
-
-# st.altair_chart(chartGender2, use_container_width=True)
 
 if(selectionCUSTCAT=='CUSTOMER WITH KIDS'):
 
@@ -1349,7 +1330,7 @@ plt.title('Accuracy by max depth')
 plt.scatter(md_range, scores)
 plt.xticks([0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]);
 plt.plot(md_range, scores, color='green', linestyle='dashed', linewidth=1, markersize=5)
-st.pyplot()
+st.pyplot(plt)
 
 
 
